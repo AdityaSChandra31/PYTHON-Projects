@@ -2,8 +2,6 @@ import cv2
 import numpy as np
 import utlis
 from PIL import Image
-import pytesseract
-import pandas as pd
 import os
 
 
@@ -55,7 +53,6 @@ if Largest_contour.size != 0:
 split_img= utlis.splitBoxes(imgThresh)
 
 
-cv2.imshow("Original",split_img[0])
 
 imgBlank=np.zeros_like(img)
 
@@ -64,40 +61,42 @@ imageArray=([img,imgGray,imgBlur,imgCanny],
 
 
 
-
-
-
-
 imgStacked = utlis.stackImages(imageArray,0.5)
 
-#cv2.imshow("Original",imgStacked)
-cv2.waitKey(0) 
 
-
-split_img1 = Image.fromarray(split_img[2])
-# Get the original dimensions
-width, height = split_img1.size
-
-# Calculate the new dimensions for cropping
-new_width = int(4 * width / 5)
-new_height = int(30 * height / 31)
-
-# Crop the image (top-left corner as reference)
-cropped_img = split_img1.crop((new_width*0.32,new_height*0.039,new_width*1.25,new_height*1.0333))
-
-# Save or display the cropped image
-output_dir = r"G:\python project 001\subfolder"
+output_dir = r"G:\PYTHON-Projects\OMR Reader\subfolder"
 os.makedirs(output_dir, exist_ok=True)  # Ensure the directory exists
 
-# Add a valid file name and extension
-cropped_image_path = os.path.join(output_dir, "cropped_image.png")
-cropped_img.save(cropped_image_path)
-cropped_img.show()  # Opens the cropped image using the default viewer
+pixels=[]
 
-print(f"Cropped image saved to {cropped_image_path}")
+# Iterate over each image in split_img
+for i, img in enumerate(split_img):
+    # Convert the image to a PIL image to crop
+    split_img1 = Image.fromarray(img)
+    
+    # Get the original dimensions
+    width, height = split_img1.size
+    
+    # Calculate the new dimensions for cropping
+    new_width = int(4 * width / 5)
+    new_height = int(30 * height / 31)
+    
+    # Crop the image (top-left corner as reference)
+    cropped_img = split_img1.crop((new_width * 0.32, new_height * 0.039, new_width * 1.25, new_height * 1.0333))
+    
+    # Save the cropped image
+    cropped_image_path = os.path.join(output_dir, f"cropped_image_{i}.png")
+    cropped_img.save(cropped_image_path)
+    print(f"Cropped image {i} saved to {cropped_image_path}")
+    
+    # Process cropped image for further slicing
+    crop_img = cv2.imread(cropped_image_path, cv2.IMREAD_GRAYSCALE)
+    boxes = utlis.sliceImage(crop_img)
+    
+    for box in boxes:
+        pixel_sum = utlis.sum_pixel_values(box)  # Get the sum of pixel values for each box
+        pixels.append(pixel_sum)         
 
 
-matrix= utlis.image_to_matrix(cropped_image_path)
 
-for row in matrix:
-    print(row)
+utlis.process_pixels(pixels)

@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+from PIL import Image
 
 ## TO STACK ALL THE IMAGES IN ONE WINDOW
 def stackImages(imgArray,scale,lables=[]):
@@ -82,75 +83,49 @@ def splitBoxes(img):
     return boxes
 
 
-def drawGrid(img,questions=5,choices=5):
-    secW = int(img.shape[1]/questions)
-    secH = int(img.shape[0]/choices)
-    for i in range (0,9):
-        pt1 = (0,secH*i)
-        pt2 = (img.shape[1],secH*i)
-        pt3 = (secW * i, 0)
-        pt4 = (secW*i,img.shape[0])
-        cv2.line(img, pt1, pt2, (255, 255, 0),2)
-        cv2.line(img, pt3, pt4, (255, 255, 0),2)
-
-    return img
-
-
-
-def image_to_matrix(image_path, threshold_value=200):
-    """
-    Converts an image of bubbles into a binary matrix (0s and 1s).
-    
-    Args:
-        image_path (str): Path to the input image.
-        threshold_value (int): Threshold value to distinguish white regions (default=200).
-        
-    Returns:
-        list: A binary matrix where 1 indicates a white bubble and 0 otherwise.
-    """
-    # Load the image
-    img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    
-    # Apply binary thresholding
-    _, binary_img = cv2.threshold(img, threshold_value, 255, cv2.THRESH_BINARY)
-    
-    # Detect contours to identify bubbles
-    contours, _ = cv2.findContours(binary_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    
-    # Sort contours top-to-bottom and left-to-right
-    bounding_boxes = [cv2.boundingRect(c) for c in contours]
-    contours, bounding_boxes = zip(*sorted(zip(contours, bounding_boxes),
-                                           key=lambda b: (b[1][1], b[1][0])))
-    
-    # Initialize matrix
-    rows = []
-    current_row_y = None
-    row = []
-    
-    for contour, (x, y, w, h) in zip(contours, bounding_boxes):
-        # If this is a new row, append the previous row to the matrix
-        if current_row_y is not None and abs(y - current_row_y) > h // 2:
-            rows.append(row)
-            row = []
-        
-        # Check if the bubble is white (1) or black (0)
-        mask = np.zeros_like(binary_img)
-        cv2.drawContours(mask, [contour], -1, 255, -1)
-        bubble_area = cv2.bitwise_and(binary_img, binary_img, mask=mask)
-        white_pixels = cv2.countNonZero(bubble_area)
-        
-        # Add 1 for white bubbles, 0 otherwise
-        if white_pixels > (0.5 * w * h):  # Check if the bubble is predominantly white
-            row.append(1)
-        else:
-            row.append(0)
-        
-        current_row_y = y
-    
-    # Append the last row
-    if row:
-        rows.append(row)
-    
-    return rows
+def sliceImage(image):
+    height, width = image.shape[:2]
+    box_height = height // 30
+    box_width = width // 4
+    boxes = []
+    for i in range(30):
+        for j in range(4):
+            y1, y2 = i * box_height, (i + 1) * box_height
+            x1, x2 = j * box_width, (j + 1) * box_width
+            box = image[y1:y2, x1:x2]
+            boxes.append(box)
+    return boxes
 
 
+def sum_pixel_values(img):
+            
+    # Compute the sum of all pixel values
+    pixel_sum = np.sum(img)
+    
+    return pixel_sum
+
+
+def get_position_label(position):
+    # Divide position by 4
+    quotient = position // 4
+    remainder = position % 4
+
+    # Assign labels based on remainder
+    if remainder == 0:
+        label = 'A'
+    elif remainder == 1:
+        label = 'B'
+    elif remainder == 2:
+        label = 'C'
+    elif remainder == 3:  # when remainder is 0, it corresponds to D
+        label = 'D'
+    
+    return quotient, label
+
+
+def process_pixels(pixels):
+    # Iterate over each pixel and check if its value is greater than 90000
+    for position, pixel_value in enumerate(pixels):
+        if pixel_value > 90000:  # Only consider pixels with value > 90000
+            quotient, label = get_position_label(position)
+            print(f"Position {position}: Quotient = {quotient+1}, Label = {label}, Pixel Value = {pixel_value}")
